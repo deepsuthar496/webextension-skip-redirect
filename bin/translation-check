@@ -2,18 +2,33 @@
 
 set -o errexit -o nounset -o pipefail -o xtrace
 
+# Get the script directory
 SCRIPT_DIRECTORY=$( cd "$( dirname "${BASH_SOURCE:-$0}" )" && pwd )
 ROOT_DIRECTORY=$SCRIPT_DIRECTORY/..
 
-REGEXP='browser.i18n.getMessage\("\K([^"]+)|"__MSG_\K([^_]+)|data-i18n="\K([^"]+)'
+# Regular expression to match the keys in the source code
+REGEXP='browser\.i18n\.getMessage\("([^"]+)"|"__MSG_(\w+)"|data-i18n="(\w+)'
 
+# Check if jq command is installed
+if ! command -v jq &> /dev/null
+then
+    echo "Error: jq command is not installed"
+    exit 1
+fi
+
+# Function to compare the keys in the source code and the translation files
+compare_keys() {
+    local language_directory=$1
+    echo ""
+    echo "$language_directory"
+    diff \
+        --unified \
+        <(grep --perl-regexp --only-matching --no-filename "$REGEXP" $ROOT_DIRECTORY/*.{js,json,html} options/*.{js,json,html} 2>/dev/null | sort --unique) \
+        <(jq --raw-output 'keys[]' "$language_directory/messages.json" | grep -v "^$" | grep -E "$REGEXP" | sort --unique) \
+}
+
+# Compare the keys for all the translation files
 for language_directory in "$ROOT_DIRECTORY"/_locales/*
-    do
-        echo ""
-        echo "$language_directory"
-        diff \
-            --unified \
-            <(grep --perl-regexp --only-matching --no-filename "$REGEXP" ./*.{js,json,html} options/*.{js,json,html} 2>/dev/null | sort --unique) \
-            <(jq --raw-output 'keys[]' "$language_directory/messages.json") \
-
-    done
+do
+    compare_keys "$language_directory"
+done
