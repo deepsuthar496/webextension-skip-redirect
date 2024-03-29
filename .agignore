@@ -1,3 +1,48 @@
-base64.js
-browser-polyfill.js
-node_modules/
+// Import the necessary modules
+const base64 = require('base64');
+const fetch = require('node-fetch');
+
+// Install the necessary node modules
+const installNodeModules = () => {
+  return Promise.all([
+    'base64',
+    'node-fetch'
+  ].map(moduleName => {
+    return new Promise((resolve, reject) => {
+      try {
+        require.resolve(moduleName);
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }))
+  .then(() => {
+    console.log('Node modules are installed');
+  })
+  .catch(e => {
+    console.error('Error installing node modules:', e);
+  });
+}
+
+// Use the base64 module
+const useBase64 = () => {
+  const encodedString = base64.encode('Hello, World!');
+  console.log('Encoded String:', encodedString);
+}
+
+// Use the fetch module
+const useFetch = () => {
+  fetch('https://jsonplaceholder.typicode.com/todos/1')
+    .then(response => response.json())
+    .then(json => console.log('Fetch Response:', json))
+    .catch(e => console.error('Error fetching data:', e));
+}
+
+// Run the functions
+installNodeModules()
+  .then(() => useBase64())
+  .then(() => useFetch())
+  .then(() => console.log('Done'))
+  .catch(e => console.error('Error:', e));
+
