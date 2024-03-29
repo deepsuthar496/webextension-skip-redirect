@@ -1,10 +1,17 @@
-root = true
+# Indent using spaces
+indent_style: space
+indent_size: 2
 
-[*]
-end_of_line = lf
-indent_style = space
-insert_final_newline = true
-trim_trailing_whitespace = true
+# Continuation line character
+end_of_line: lf
 
+# Trim trailing whitespace
+trim_trailing_whitespace: true
+
+# Add final newline
+insert_final_newline: true
+
+# JavaScript specific configuration
 [*.js]
-indent_size = 4
+# Indent size for JavaScript
+indent_size: 4
