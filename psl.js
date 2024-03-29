@@ -1,41 +1,41 @@
 /* global pslrules */
-const psl = (function(root) { //  eslint-disable-line no-unused-vars
 
-    if (typeof pslrules === "undefined") {
-        pslrules = require("./pslrules"); //  eslint-disable-line no-global-assign,no-unused-vars
+const psl = (() => {
+  if (typeof pslrules === 'undefined') {
+    try {
+      pslrules = require('./pslrules');
+    } catch (e) {
+      console.error('Error importing pslrules module');
+      throw e;
+    }
+  }
+
+  const getDomain = (hostname, previousHead = undefined) => {
+    if (!hostname) return undefined;
+
+    const [exception] = [...pslrules.EXCEPTION_ENTRIES].filter(([entry]) => entry === hostname);
+    if (exception) return hostname;
+
+    const dotIndex = hostname.indexOf('.');
+    if (dotIndex === -1) return undefined;
+
+    const [head, rest] = [hostname.slice(0, dotIndex), hostname.slice(dotIndex + 1)];
+
+    if (pslrules.WILDCARD_ENTRIES.has(rest) && previousHead) {
+      return [previousHead, head, rest].join('.');
     }
 
-    function getDomain(hostname, previousHead=undefined) {
-        if (!hostname) {
-            return undefined;
-        }
-
-        if (pslrules.EXCEPTION_ENTRIES.has(hostname)) {
-            return hostname;
-        }
-
-        const dotIndex = hostname.indexOf(".");
-        if (dotIndex == -1) {
-            return undefined;
-        }
-
-        const head = hostname.slice(0, dotIndex);
-        const rest = hostname.slice(dotIndex + 1);
-
-        if (pslrules.WILDCARD_ENTRIES.has(rest) && previousHead) {
-            return [previousHead, head, rest].join(".");
-        }
-        if (pslrules.NORMAL_ENTRIES.has(rest)) {
-            return [head, rest].join(".");
-        }
-
-        return getDomain(rest, head);
+    if (pslrules.NORMAL_ENTRIES.has(rest)) {
+      return [head, rest].join('.');
     }
 
-    root.getDomain = getDomain;
+    return getDomain(rest, head);
+  };
 
-    return {
-        getDomain: getDomain,
-    };
-
+  return {
+    getDomain,
+  };
 })(this);
+
+module.exports = psl;
+
