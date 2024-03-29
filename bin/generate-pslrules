@@ -2,45 +2,33 @@
 
 set -o errexit -o nounset -o pipefail -o xtrace
 
+# Get the script directory
 SCRIPT_DIRECTORY=$( cd "$( dirname "${BASH_SOURCE:-$0}" )" && pwd )
 ROOT_DIRECTORY=$(realpath $SCRIPT_DIRECTORY/../)
 
+# Define the file paths and URLs
 PSL_FILE="public_suffix_list.dat"
-PSL_RULES="pslrules.js"
 PSL_FILE_PATH=$ROOT_DIRECTORY/$PSL_FILE
+PSL_RULES="pslrules.js"
 PSL_RULES_PATH=$ROOT_DIRECTORY/$PSL_RULES
+PSL_URL="https://publicsuffix.org/list/$PSL_FILE"
 
+# Download the PSL file if it doesn't exist
 if [ ! -f $PSL_FILE_PATH ]; then
-    wget --directory-prefix $ROOT_DIRECTORY https://publicsuffix.org/list/$PSL_FILE
+    wget --directory-prefix $ROOT_DIRECTORY $PSL_URL || { echo "Error downloading $PSL_URL"; exit 1; }
 fi
 
-CONTENT=$(cat << END
+# Generate the JavaScript code using jq
+cat << EOF > $PSL_RULES_PATH
 const pslrules = (function(root) { //  eslint-disable-line no-unused-vars
 
     const EXCEPTION_ENTRIES = new Set([
-$(cat $PSL_FILE_PATH | grep '^!'  | sed -e 's/^!//'                                | awk '{print $1}' | sed -e 's/\(.*\)/        "\1",/')
+$(cat $PSL_FILE_PATH | grep '^!' | sed -e 's/^!//' | awk '{print $1}' | tr -d '\n')
     ]);
 
     const WILDCARD_ENTRIES = new Set([
-$(cat $PSL_FILE_PATH | grep '^*.' | sed -e 's/^\*\.//'                             | awk '{print $1}' | sed -e 's/\(.*\)/        "\1",/')
+$(cat $PSL_FILE_PATH | grep '^*.' | sed -e 's/^\*\.//' | awk '{print $1}' | tr -d '\n')
     ]);
 
     const NORMAL_ENTRIES = new Set([
-$(cat $PSL_FILE_PATH | grep -v '^//' | grep -v '^$' | grep -v '^!' | grep -v '^*.' | awk '{print $1}' | sed -e 's/\(.*\)/        "\1",/')
-    ]);
-
-    root.EXCEPTION_ENTRIES = EXCEPTION_ENTRIES;
-    root.WILDCARD_ENTRIES = WILDCARD_ENTRIES;
-    root.NORMAL_ENTRIES = NORMAL_ENTRIES;
-
-    return {
-        EXCEPTION_ENTRIES: EXCEPTION_ENTRIES,
-        WILDCARD_ENTRIES: WILDCARD_ENTRIES,
-        NORMAL_ENTRIES: NORMAL_ENTRIES,
-    };
-
-})(this);
-END
-)
-
-echo "$CONTENT" > $PSL_RULES_PATH
+$(cat $PSL_FILE_PATH | grep -Ev '^//|^$|^!|^*.' | awk '{print $1}'
